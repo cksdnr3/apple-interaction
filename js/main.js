@@ -8,6 +8,7 @@
     let rafStatus;
     let isInterSection = false;
     let progress = 0
+
     const sceneInfo = [
         {
             type: 'sticky',
@@ -354,7 +355,6 @@
     function scrollLoop() {
         prevScrollHeight = 0;
         isInterSection = false;
-        
         for (let i = 0; i < currentScene; i++) {
             prevScrollHeight += sceneInfo[i].scrollHeight;
         }
@@ -365,7 +365,7 @@
             document.body.setAttribute('id', `show-scene-${currentScene}`);
         }
 
-        if (delayedYOffset < prevScrollHeight) {
+        if (delayedYOffset && delayedYOffset < prevScrollHeight) {
             if (currentScene === 0) return;
             currentScene--;
             isInterSection = true;
@@ -377,17 +377,13 @@
 
     function requestAnimationFrameHandler() {
         delayedYOffset = delayedYOffset + (pageScrollY - delayedYOffset) * acc;
-
         if (currentScene === 0 || currentScene === 2) {
             if (!isInterSection) {
                 const styles = sceneInfo[currentScene].styles;
                 const objs = sceneInfo[currentScene].objs;
                 const scrollY_bySection = delayedYOffset - prevScrollHeight;
                 progress = Math.round(calcValues(styles.imageSequence, scrollY_bySection));
-                console.log(delayedYOffset);
-                console.log(scrollY_bySection);
                 if (objs.videoImages[progress]){
-                    console.log(progress)
                     objs.context.drawImage(objs.videoImages[progress], 0, 0);
                 }
             }
@@ -404,14 +400,12 @@
     function setCanvasImages() {
         for (let i = 0; i < sceneInfo[0].styles.imageCount; i++) {
             const imgElem = new Image();
-            
             imgElem.src = `./video/001/IMG_${6726 + i}.JPG`;
             sceneInfo[0].objs.videoImages.push(imgElem);
         }
 
         for (let i = 0; i < sceneInfo[2].styles.imageCount; i++) {
             const imgElem = new Image();
-
             imgElem.src = `./video/002/IMG_${7027 + i}.JPG`;
             sceneInfo[2].objs.videoImages.push(imgElem);
         }
@@ -423,37 +417,44 @@
         })
     };
 
-    window.addEventListener('scroll', () => {
-        pageScrollY = window.scrollY;
-
-        scrollLoop();
-
-        if (pageScrollY > 43) {
-            document.body.classList.add('lnb-sticky');
-        } else {
-            document.body.classList.remove('lnb-sticky');
-        }
-
-        if (!rafStatus) {
-            rafId = requestAnimationFrame(requestAnimationFrameHandler)
-            rafStatus = true;
-        }
-    });
-
-    window.addEventListener('resize', () => {
-        if (window.innerWidth > 600 ) setLayout();
-        sceneInfo[3].styles.rectTopY = 0;
-    });
-    window.addEventListener('orientationchange',setLayout)
     window.addEventListener('load', () => {
+        document.body.classList.remove('before-load');
 
         setLayout();
         if (currentScene === 0) {
             const objs = sceneInfo[0].objs;
-            console.log(progress)
-
             objs.context.drawImage(objs.videoImages[0], 0, 0);
         }
+
+
+        window.addEventListener('scroll', () => {
+            pageScrollY = window.scrollY;
+            if (pageScrollY > 43) {
+                document.body.classList.add('lnb-sticky');
+            } else {
+                document.body.classList.remove('lnb-sticky');
+            }
+            if (!rafStatus) {
+                rafId = requestAnimationFrame(requestAnimationFrameHandler)
+                rafStatus = true;
+            }
+            scrollLoop();
+
+        });
+
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 900 ) {
+                setLayout();
+                sceneInfo[3].styles.rectTopY = 0;
+            } 
+
+        });
+
+        window.addEventListener('orientationchange', setLayout);
+
+        document.querySelector('.loading').addEventListener('transitionend', (e) => {
+            document.body.removeChild(e.currentTarget);
+        });
     });
     setCanvasImages();
 })();

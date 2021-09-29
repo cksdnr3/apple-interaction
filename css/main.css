@@ -31,6 +31,10 @@ a {
     z-index: 10;
 }
 
+.container {
+    overflow-x: hidden;
+}
+
 .lnb {
     position: absolute;
     top: 45px;
@@ -47,6 +51,7 @@ a {
     position: fixed;
     top: 0;
     background-color: rgba(255, 255, 255, 0.1);
+    -webkit-backdrop-filter: saturate(180%) blur(15px);
     backdrop-filter: saturate(180%) blur(15px);
 }
 
@@ -103,7 +108,7 @@ a {
 .main-message p {
     font-weight: bold;
     text-align: center;
-    line-height: 1.2
+    line-height: 1.2;
 }
 
 .description {
@@ -165,7 +170,7 @@ a {
     color: #888;
     font-size: 1.2rem;
     max-width: 1000px;
-    margin: -8rem auto 0;
+    margin: -28rem auto 0;
 }
 
 .footer {
@@ -181,6 +186,7 @@ a {
 #show-scene-2 #scroll-section-2 .sticky-elem, 
 #show-scene-3 #scroll-section-3 .sticky-elem {
     display: block;
+    will-change: transform, opacity;
 }
 
 #scroll-section-3 {
@@ -222,6 +228,57 @@ a {
     top: 0;
 }
 
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+    background-color: white;
+    opacity: 0;
+    transition: 0.5s;
+}
+
+@keyframes loading-circle-ani {
+    0% { stroke-dashoffset: 157; }
+    75% { stroke-dashoffset: -147; }
+    100% { stroke-dashoffset: -157; }
+}
+
+@keyframes loading-spin {
+    100% { transform: rotate(360deg); }
+}
+
+.loading-circle {
+    width: 54px;
+    height: 54px;
+    animation: loading-spin 3s infinite;
+}
+.loading-circle circle {
+    stroke: black;
+    stroke-width: 4;
+    stroke-dasharray: 157;
+    stroke-dashoffset: 0;
+    fill: none;
+    animation: loading-circle-ani 1s infinite;
+}
+
+.before-load .container {
+    display: none;
+}
+
+.before-load .loading {
+    opacity: 1;
+}
+
+body.before-load {
+    overflow: hidden;
+}
+
 @media (min-width: 1024px) {
 
     #scroll-section-0 h1 {
@@ -229,8 +286,6 @@ a {
     }
     .main-message {
         font-size: 4vw;
-
-
     }
     .description {
         padding: 0;
@@ -254,6 +309,7 @@ a {
     }
     .canvas-caption {
         font-size: 2rem;
+        margin: -9rem auto 0;
     }
 
     #scroll-section-2 .a {
