@@ -2,6 +2,12 @@
     let pageScrollY = 0
     let prevScrollHeight = 0;
     let currentScene = 0;
+    let delayedYOffset = 0;
+    let acc = 0.2;
+    let rafId;
+    let rafStatus;
+    let isInterSection = false;
+    let progress = 0
     const sceneInfo = [
         {
             type: 'sticky',
@@ -90,12 +96,20 @@
                     './images/blend-image-1.jpg', './images/blend-image-2.jpg'
                 ],
                 images: []
-            }
+            },
+            styles: {
+                leftRectX: [0, 0, { start: 0, end: 0 }],
+                rightRectX: [0, 0, { start: 0, end: 0 }],
+                blendHeight: [0, 0, { start: 0, end: 0 }],
+                canvasScale: [0, 0, { start: 0, end: 0 }],
+                canvasCaptioOpacity: [0, 1, { start: 0, end: 0 }],
+                canvasCaptioTranslateY: [20, 0, { start: 0, end: 0 }],
+                rectTopY: 0,
+            },
         },
     ];
 
     function setLayout() {
-        console.log('set layout')
         for (let i = 0; i < sceneInfo.length; i++) {
             if (sceneInfo[i].type === 'sticky') {
                 sceneInfo[i].scrollHeight = sceneInfo[i].heightNum * window.innerHeight;
@@ -117,9 +131,8 @@
 
         const heightRatio = window.innerHeight / 1080;
         sceneInfo[0].objs.canvas.style.transform = `translate3d(-50%, -50%, 0) scale(${heightRatio})`;
-        // sceneInfo[0].objs.canvas.style.opacity = "1";
-
         sceneInfo[2].objs.canvas.style.transform = `translate3d(-50%, -50%, 0) scale(${heightRatio})`;
+        sceneInfo[3].objs.context.fillStyle = 'white';
     }
 
     function playAnimation() {
@@ -131,8 +144,6 @@
         switch (currentScene) {
             case 0:
                 sceneInfo[0].objs.canvas.style.opacity = calcValues(sceneInfo[0].styles.canvas_opcaity, scrollY_bySection);
-                const progressA = Math.round(calcValues(styles.imageSequence, scrollY_bySection));
-                objs.context.drawImage(objs.videoImages[progressA], 0, 0);
 
                 if (scrollRatio <= 0.22) {
                     // in
@@ -178,9 +189,6 @@
             case 2:
                 const [pinA, pinB] = objs.pin;
 
-                const progressB = Math.round(calcValues(styles.imageSequence, scrollY_bySection));
-                objs.context.drawImage(objs.videoImages[progressB], 0, 0);
-
                 if (scrollRatio <= 0.5) {
                     objs.canvas.style.opacity = calcValues(styles.canvas_opcaity_in, scrollY_bySection);
                 } else {
@@ -218,6 +226,29 @@
                     objs.messages[2].style.opacity = calcValues(styles.messageC_opacity_out, scrollY_bySection);
                     objs.messages[2].style.transform = `translate3d(0, ${calcValues(styles.messageC_translateY_out, scrollY_bySection)}%, 0)`;
                 }
+
+                if (scrollRatio > 0.9) {
+                    const objs = sceneInfo[3].objs;
+                    const styles = sceneInfo[3].styles;
+                    const widthRatio = window.innerWidth / objs.canvas.width;
+                    const heightRatio = window.innerHeight / objs.canvas.height;
+                    let scale = (widthRatio <= heightRatio) ? heightRatio : widthRatio;
+
+                    objs.canvas.style.transform = `scale(${scale})`;
+                    objs.context.drawImage(objs.images[0], 0, 0);
+
+                    const recalculatedInnerWidth = document.body.offsetWidth / scale;
+                    const whiteRectWidth = recalculatedInnerWidth * 0.15;
+
+                    styles.leftRectX[0] = (objs.canvas.width - recalculatedInnerWidth) / 2;
+                    styles.leftRectX[1] = styles.leftRectX[0] - whiteRectWidth;
+                    styles.rightRectX[0] = styles.leftRectX[0] + recalculatedInnerWidth - whiteRectWidth;
+                    styles.rightRectX[1] = styles.rightRectX[0] + whiteRectWidth;
+
+                    objs.context.fillRect(parseInt(styles.leftRectX[0]), 0, parseInt(whiteRectWidth), objs.canvas.height);
+                    objs.context.fillRect(parseInt(styles.rightRectX[0]), 0, parseInt(whiteRectWidth), objs.canvas.height);
+                }
+
                 break;
             case 3:
                 const widthRatio = window.innerWidth / objs.canvas.width;
@@ -225,9 +256,69 @@
                 let scale = (widthRatio <= heightRatio) ? heightRatio : widthRatio;
 
                 objs.canvas.style.transform = `scale(${scale})`;
-                console.log(objs.canvas.width * scale)
-                console.log(objs.canvas.height * scale)
                 objs.context.drawImage(objs.images[0], 0, 0);
+
+                const recalculatedInnerWidth = document.body.offsetWidth / scale;
+
+                if (!styles.rectTopY) {
+                    styles.rectTopY = objs.canvas.offsetTop + (objs.canvas.height - objs.canvas.height * scale) / 2;
+                    styles.leftRectX[2].start = window.innerHeight / 3 / sceneInfo[currentScene].scrollHeight;
+                    styles.rightRectX[2].start = window.innerHeight / 3 / sceneInfo[currentScene].scrollHeight;
+                    styles.leftRectX[2].end = styles.rectTopY / sceneInfo[currentScene].scrollHeight;
+                    styles.rightRectX[2].end = styles.rectTopY / sceneInfo[currentScene].scrollHeight;
+
+                }
+                
+                const whiteRectWidth = recalculatedInnerWidth * 0.15;
+                styles.leftRectX[0] = (objs.canvas.width - recalculatedInnerWidth) / 2;
+                styles.leftRectX[1] = styles.leftRectX[0] - whiteRectWidth;
+                styles.rightRectX[0] = styles.leftRectX[0] + recalculatedInnerWidth - whiteRectWidth;
+                styles.rightRectX[1] = styles.rightRectX[0] + whiteRectWidth;
+
+                objs.context.fillRect(parseInt(calcValues(styles.leftRectX, scrollY_bySection)), 0, parseInt(whiteRectWidth), objs.canvas.height);
+                objs.context.fillRect(parseInt(calcValues(styles.rightRectX, scrollY_bySection)), 0, parseInt(whiteRectWidth), objs.canvas.height);
+
+                if (scrollRatio < styles.leftRectX[2].end) {
+                    objs.canvas.classList.remove('sticky');
+                } else {
+                    objs.canvas.classList.add('sticky');
+
+                    styles.blendHeight[0] = 0;
+                    styles.blendHeight[1] = objs.canvas.height;
+                    styles.blendHeight[2].start = styles.leftRectX[2].end;
+                    styles.blendHeight[2].end = styles.blendHeight[2].start + 0.2;
+
+                    const blendHeight = calcValues(styles.blendHeight, scrollY_bySection);
+                    objs.context.drawImage(objs.images[1],
+                        0, objs.canvas.height - blendHeight, objs.canvas.width, blendHeight,
+                        0, objs.canvas.height - blendHeight, objs.canvas.width, blendHeight    
+                    );
+
+                    objs.canvas.style.top = `${-((objs.canvas.height - objs.canvas.height * scale) / 2)}px`
+
+                    if (scrollRatio > styles.blendHeight[2].end) {
+                        objs.canvas.style.marginTop = 0;
+                        styles.canvasScale[0] = scale;
+                        styles.canvasScale[1] = document.body.offsetWidth / (objs.canvas.width * 1.5);
+                        styles.canvasScale[2].start = styles.blendHeight[2].end;
+                        styles.canvasScale[2].end = styles.canvasScale[2].start + 0.2;
+
+
+                        objs.canvas.style.transform = `scale(${calcValues(styles.canvasScale, scrollY_bySection)})`;
+
+                        if (scrollRatio > styles.canvasScale[2].end) {
+                            objs.canvas.classList.remove('sticky');
+                            objs.canvas.style.marginTop = `${sceneInfo[currentScene].scrollHeight * 0.4}px`;
+                            styles.canvasCaptioOpacity[2].start = styles.canvasScale[2].end;
+                            styles.canvasCaptioOpacity[2].end = styles.canvasCaptioOpacity[2].start + 0.1;
+                            styles.canvasCaptioTranslateY[2].start = styles.canvasScale[2].end;
+                            styles.canvasCaptioTranslateY[2].end = styles.canvasCaptioTranslateY[2].start + 0.2;
+                            
+                            objs.canvasCaption.style.transform = `translate3d(0, ${calcValues(styles.canvasCaptioTranslateY, scrollY_bySection)}%, 0)`;
+                            objs.canvasCaption.style.opacity = calcValues(styles.canvasCaptioOpacity, scrollY_bySection);
+                        }
+                    }
+                }
 
                 break;
             default: break;
@@ -238,7 +329,7 @@
         let rv;
         const [min, max, part] = styleRange;
         const scrollHeight = sceneInfo[currentScene].scrollHeight;
-        const scrollRatio = (pageScrollY - prevScrollHeight) / scrollHeight;
+        const scrollRatio = currentScrollY / scrollHeight;
 
         if (styleRange[2]) {
             const partAnimationStart = scrollHeight * part.start;
@@ -261,21 +352,20 @@
     }
 
     function scrollLoop() {
-        let isInterSection = false;
         prevScrollHeight = 0;
+        isInterSection = false;
         
-
         for (let i = 0; i < currentScene; i++) {
             prevScrollHeight += sceneInfo[i].scrollHeight;
         }
 
-        if (pageScrollY > prevScrollHeight + sceneInfo[currentScene].scrollHeight) {
+        if (delayedYOffset > prevScrollHeight + sceneInfo[currentScene].scrollHeight) {
             currentScene++;
             isInterSection = true
             document.body.setAttribute('id', `show-scene-${currentScene}`);
         }
 
-        if (pageScrollY < prevScrollHeight) {
+        if (delayedYOffset < prevScrollHeight) {
             if (currentScene === 0) return;
             currentScene--;
             isInterSection = true;
@@ -283,6 +373,32 @@
         }
 
         if (!isInterSection) playAnimation();
+    }
+
+    function requestAnimationFrameHandler() {
+        delayedYOffset = delayedYOffset + (pageScrollY - delayedYOffset) * acc;
+
+        if (currentScene === 0 || currentScene === 2) {
+            if (!isInterSection) {
+                const styles = sceneInfo[currentScene].styles;
+                const objs = sceneInfo[currentScene].objs;
+                const scrollY_bySection = delayedYOffset - prevScrollHeight;
+                progress = Math.round(calcValues(styles.imageSequence, scrollY_bySection));
+                console.log(delayedYOffset);
+                console.log(scrollY_bySection);
+                if (objs.videoImages[progress]){
+                    console.log(progress)
+                    objs.context.drawImage(objs.videoImages[progress], 0, 0);
+                }
+            }
+        }
+
+        rafId = requestAnimationFrame(requestAnimationFrameHandler);
+
+        if (Math.abs(pageScrollY - delayedYOffset) < 1) {
+            cancelAnimationFrame(rafId);
+            rafStatus = false;
+        }
     }
 
     function setCanvasImages() {
@@ -305,22 +421,39 @@
             imgElem.src = path;
             sceneInfo[3].objs.images.push(imgElem);
         })
-
     };
 
     window.addEventListener('scroll', () => {
         pageScrollY = window.scrollY;
-        scrollLoop();
-    });
 
-    window.addEventListener('resize', setLayout);
-    window.addEventListener('load', () => {
-        setLayout();
-        if (currentScene === 0) {
-            const objs = sceneInfo[currentScene].objs;
-            objs.context.drawImage(objs.videoImages[0], 0, 0);
+        scrollLoop();
+
+        if (pageScrollY > 43) {
+            document.body.classList.add('lnb-sticky');
+        } else {
+            document.body.classList.remove('lnb-sticky');
         }
 
+        if (!rafStatus) {
+            rafId = requestAnimationFrame(requestAnimationFrameHandler)
+            rafStatus = true;
+        }
+    });
+
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 600 ) setLayout();
+        sceneInfo[3].styles.rectTopY = 0;
+    });
+    window.addEventListener('orientationchange',setLayout)
+    window.addEventListener('load', () => {
+
+        setLayout();
+        if (currentScene === 0) {
+            const objs = sceneInfo[0].objs;
+            console.log(progress)
+
+            objs.context.drawImage(objs.videoImages[0], 0, 0);
+        }
     });
     setCanvasImages();
 })();
