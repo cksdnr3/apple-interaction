@@ -398,6 +398,7 @@
     }
 
     function setCanvasImages() {
+        
         for (let i = 0; i < sceneInfo[0].styles.imageCount; i++) {
             const imgElem = new Image();
             imgElem.src = `./video/001/IMG_${6726 + i}.JPG`;
